@@ -358,7 +358,7 @@ async def top_up_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = await get_user_id_from_query(update)
     context.user_data["new_user"] = await is_new_user(user_id)
     if context.user_data["new_user"] == True:
-        text=("To help us process your top-up, please provide your full name in the following format: 'John'. \n"
+        text=("To help us process your top-up, please provide your name in the following format: 'John'. \n"
               "This information is only required for your first top-up.")
         await update_default_message(update, context, text)
         return NEW_USER_NAME
@@ -756,8 +756,8 @@ if __name__ == '__main__':
                 CommandHandler('start', start),
                 CommandHandler('cancel', cancel),
             },
-            NEW_USER: [MessageHandler(filters.TEXT, register_new_user)],
-            NEW_USER_NAME: [MessageHandler(filters.TEXT, get_new_user_name)],
+            NEW_USER: [MessageHandler(filters.Regex("^[0-9]{8}$"), register_new_user)],
+            NEW_USER_NAME: [MessageHandler(filters.Regex("^[a-zA-Z]+$"), get_new_user_name)],
             SHOW_QR: [MessageHandler(filters.TEXT, show_QR)],
         },
         fallbacks=[MessageHandler(filters.TEXT, unknown)]
