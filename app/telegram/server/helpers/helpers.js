@@ -297,17 +297,42 @@ module.exports = {
   getUserWalletFirebase: async (userId) => {
     const createUserWalletFirebase = async (userId) => {
       try {
+        console.log("New user detected, creating new wallet")
+        const customConnection = new Connection(CUSTOM_DEVNET_RPC);
+
+        // Generate a new key pair for the Solana network
+        const keypair = Keypair.generate();
+        const publicKey = keypair.publicKey;
+        const privateKey = keypair.secretKey;
+        console.log("Key pair created!")
+        const airdrop = await customConnection.requestAirdrop(
+          publicKey,
+          2 * LAMPORTS_PER_SOL
+        );
+        console.log(`Airdrop transaction for ${publicKey}`, airdrop);
+        // Save public & private key in user's record
+        const userRef = doc(db, "users", userId.toString());
+        await updateDoc(userRef, {
+          publicKey: publicKey.toString(),
+          privateKey: Array.from(privateKey),
+        }); 
+
+        return { publicKey, privateKey };
+      } catch (err) {
+        console.log("Keypair RPC error ", err);
+        console.log("Using firestore fallback");
+
+        try{
         const keypairsRef = collection(db, "keypairs");
         const keypairsQuery = query(keypairsRef);
 
         // Get the first document in the keypairs collection
         const keypairsSnapshot = await getDocs(keypairsQuery);
-        // Fallback is to request on the spot
+        // If its empty try to request airdrop again
         if (keypairsSnapshot.empty) {
-          // Should run the airdrop query again here
           console.log('The keypairs collection is empty.');
           // Connect to Solana RPC endpoint
-          const customConnection = new Connection(rpcUrl);
+          const customConnection = new Connection(CUSTOM_DEVNET_RPC);
 
           // Generate a new key pair for the Solana network
           const keypair = Keypair.generate();
@@ -333,7 +358,7 @@ module.exports = {
           const keypair = keypairRef.data();
 
           const publicKey = keypair.publicKey;
-          const privateKey = keypair.secretKey;
+          const privateKey = keypair.privateKey;
 
           const userRef = doc(db, "users", userId.toString());
           await updateDoc(userRef, {
@@ -347,8 +372,9 @@ module.exports = {
 
           return { publicKey, privateKey };
         }
-      } catch (err) {
-        console.log("createUserWalletFirebase error ", err);
+      }catch(firebaseErr){
+        console.log("createUserWalletFirebase error ", firebaseErr);
+        }
       }
     };
 
@@ -357,6 +383,7 @@ module.exports = {
       const docSnap = await getDoc(docRef);
       const userInfo = docSnap.data();
       if ("publicKey" in userInfo && "privateKey" in userInfo) {
+        console.log("Wallet already exists")
         const rawPrivateKey = userInfo.privateKey;
         const privateKeyArray = Uint8Array.from(
           Object.entries(rawPrivateKey).map(([key, value]) => value)
