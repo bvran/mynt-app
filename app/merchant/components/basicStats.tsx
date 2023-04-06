@@ -1,5 +1,5 @@
 import {
-    Box,
+    Box, 
     SimpleGrid,
   } from '@chakra-ui/react';
 import StatsCard from "./statsCard";
